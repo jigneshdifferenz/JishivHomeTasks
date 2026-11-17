@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f4f6fb" />
     <title>Jishiv Home Tasks</title>
     <style>
@@ -21,16 +21,18 @@
       }
 
       * { box-sizing: border-box; }
+      html { min-width: 320px; -webkit-text-size-adjust: 100%; }
       body {
+        min-width: 320px;
         margin: 0;
         background: radial-gradient(ellipse at top left, #eaf0ff 0, transparent 38%), var(--bg);
         color: var(--text);
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
-      .app { max-width: 1100px; margin: 0 auto; padding: 38px 22px 60px; }
+      .app { width: min(100%, 1100px); margin: 0 auto; padding: 38px 22px 60px; }
       header { margin-bottom: 26px; }
-      h1 { margin: 0; font-size: clamp(2rem, 5vw, 2.8rem); letter-spacing: -0.04em; }
-      .subtitle { margin: 8px 0 0; color: var(--muted); }
+      h1 { margin: 0; font-size: clamp(2rem, 5vw, 2.8rem); letter-spacing: -0.04em; line-height: 1.15; }
+      .subtitle { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
       .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
       .summary span, .count {
         display: inline-flex; align-items: center; justify-content: center;
@@ -39,7 +41,7 @@
       }
       .summary .done-summary { background: var(--green-soft); color: var(--green); }
       .columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .75fr); gap: 22px; align-items: start; }
-      .panel { padding: 20px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+      .panel { min-width: 0; padding: 20px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
       .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
       h2 { margin: 0; font-size: 1.25rem; }
       .category { margin-top: 20px; }
@@ -48,22 +50,26 @@
       .category-heading small { color: var(--muted); font-weight: 500; }
       ul { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
       .task {
-        display: flex; align-items: flex-start; gap: 11px; padding: 12px;
+        display: flex; align-items: flex-start; gap: 11px; min-width: 0; padding: 12px;
         border: 1px solid var(--border); border-radius: 12px; background: #fcfcfd;
       }
-      .task input { width: 19px; height: 19px; margin: 1px 0 0; accent-color: var(--green); flex: 0 0 auto; cursor: pointer; }
-      .task label { flex: 1; line-height: 1.45; cursor: pointer; overflow-wrap: anywhere; }
+      .task input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--green); flex: 0 0 auto; cursor: pointer; }
+      .task label { flex: 1; min-width: 0; line-height: 1.5; cursor: pointer; overflow-wrap: anywhere; }
       .task.done label { color: var(--muted); text-decoration: line-through; }
-      .delete {
-        flex: 0 0 auto; border: 0; border-radius: 8px; padding: 6px 9px;
-        background: #fff0f0; color: #b42318; font: inherit; font-size: .8rem; cursor: pointer;
-      }
       .empty { margin: 0; padding: 20px 12px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted); text-align: center; }
-      .done-groups { display: grid; gap: 16px; }
-      .done-category h3 { margin: 0 0 8px; font-size: .95rem; color: var(--muted); }
       @media (max-width: 760px) {
-        .app { padding: 26px 15px 40px; }
-        .columns { grid-template-columns: 1fr; }
+        .app { padding: 26px 16px 40px; }
+        .columns { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+        .panel { padding: 17px; border-radius: 16px; }
+      }
+      @media (max-width: 420px) {
+        .app { padding: 22px 12px 32px; }
+        header { margin-bottom: 20px; }
+        .panel { padding: 14px; }
+        .panel-heading { margin-bottom: 14px; }
+        h2 { font-size: 1.15rem; }
+        .task { gap: 10px; padding: 11px; }
+        .task input { width: 24px; height: 24px; }
       }
     </style>
   </head>
@@ -160,7 +166,6 @@
         return `<li class="task${task.done ? ' done' : ''}">
           <input type="checkbox" id="task-${escapeHtml(task.id)}" data-task-id="${escapeHtml(task.id)}"${checked} aria-label="${task.done ? 'Mark pending' : 'Mark done'}: ${escapeHtml(task.text)}">
           <label for="task-${escapeHtml(task.id)}">${escapeHtml(task.text)}</label>
-          <button class="delete" type="button" data-delete-id="${escapeHtml(task.id)}" aria-label="Delete: ${escapeHtml(task.text)}">Delete</button>
         </li>`;
       }
 
@@ -201,14 +206,6 @@
         if (id !== undefined) {
           const task = tasks.find((item) => String(item.id) === id);
           if (task) task.done = event.target.checked;
-          render();
-        }
-      });
-
-      document.addEventListener('click', (event) => {
-        const id = event.target.dataset.deleteId;
-        if (id !== undefined) {
-          tasks = tasks.filter((task) => String(task.id) !== id);
           render();
         }
       });
