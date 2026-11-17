@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f6fb" />
+    <title>Jishiv Home Tasks</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f6fb;
+        --surface: #fff;
+        --text: #1f2937;
+        --muted: #667085;
+        --border: #e4e8f0;
+        --blue: #315ee8;
+        --blue-soft: #eaf0ff;
+        --green: #17834a;
+        --green-soft: #e7f7ee;
+        --shadow: 0 12px 32px rgb(34 49 84 / 8%);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: radial-gradient(ellipse at top left, #eaf0ff 0, transparent 38%), var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .app { max-width: 1100px; margin: 0 auto; padding: 38px 22px 60px; }
+      header { margin-bottom: 26px; }
+      h1 { margin: 0; font-size: clamp(2rem, 5vw, 2.8rem); letter-spacing: -0.04em; }
+      .subtitle { margin: 8px 0 0; color: var(--muted); }
+      .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+      .summary span, .count {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-height: 32px; padding: 5px 12px; border-radius: 999px;
+        background: var(--blue-soft); color: var(--blue); font-size: .9rem; font-weight: 700;
+      }
+      .summary .done-summary { background: var(--green-soft); color: var(--green); }
+      .columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .75fr); gap: 22px; align-items: start; }
+      .panel { padding: 20px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+      .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+      h2 { margin: 0; font-size: 1.25rem; }
+      .category { margin-top: 20px; }
+      .category:first-child { margin-top: 0; }
+      .category-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 9px; font-size: 1rem; }
+      .category-heading small { color: var(--muted); font-weight: 500; }
+      ul { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+      .task {
+        display: flex; align-items: flex-start; gap: 11px; padding: 12px;
+        border: 1px solid var(--border); border-radius: 12px; background: #fcfcfd;
+      }
+      .task input { width: 19px; height: 19px; margin: 1px 0 0; accent-color: var(--green); flex: 0 0 auto; cursor: pointer; }
+      .task label { flex: 1; line-height: 1.45; cursor: pointer; overflow-wrap: anywhere; }
+      .task.done label { color: var(--muted); text-decoration: line-through; }
+      .delete {
+        flex: 0 0 auto; border: 0; border-radius: 8px; padding: 6px 9px;
+        background: #fff0f0; color: #b42318; font: inherit; font-size: .8rem; cursor: pointer;
+      }
+      .empty { margin: 0; padding: 20px 12px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted); text-align: center; }
+      .done-groups { display: grid; gap: 16px; }
+      .done-category h3 { margin: 0 0 8px; font-size: .95rem; color: var(--muted); }
+      @media (max-width: 760px) {
+        .app { padding: 26px 15px 40px; }
+        .columns { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>Jishiv Home Tasks</h1>
+        <p class="subtitle">Tick a task to move it to the Done list. Your changes are saved in this browser.</p>
+        <div class="summary" aria-live="polite">
+          <span id="pendingSummary">0 pending</span>
+          <span class="done-summary" id="doneSummary">0 done</span>
+        </div>
+      </header>
+
+      <div class="columns">
+        <section class="panel" aria-labelledby="pending-title">
+          <div class="panel-heading"><h2 id="pending-title">Pending Tasks</h2><span class="count" id="pendingCount">0</span></div>
+          <div id="pendingGroups"></div>
+        </section>
+        <section class="panel" aria-labelledby="done-title">
+          <div class="panel-heading"><h2 id="done-title">Done Tasks</h2><span class="count" id="doneCount">0</span></div>
+          <div id="doneGroups"></div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const STORAGE_KEY = 'jishiv-home-tasks-v2';
+      const initialTasks = [
+        { category: 'Glasswork (Bhavesh Bhai)', text: 'Sliding/folding door near the temple (change or modify)' },
+        { category: 'Glasswork (Bhavesh Bhai)', text: 'Door for the kitchen' },
+        { category: 'Glasswork (Bhavesh Bhai)', text: 'Glass in the bathroom' },
+        { category: 'Glasswork (Bhavesh Bhai)', text: 'Guardrails for the balcony' },
+        { category: 'Glasswork (Bhavesh Bhai)', text: 'ACP sheet for the roof and elevation' },
+        { category: 'Glasswork (Bhavesh Bhai)', text: 'Glass roof for the Chowkdi' },
+        { category: 'Glasswork (Bhavesh Bhai)', text: 'Lighted mirror for the dressing table' },
+        { category: 'Glasswork (Bhavesh Bhai)', text: 'Mirror for the washbasin' },
+
+        { category: 'Plumber', text: 'Center the basin or change its position' },
+        { category: 'Plumber', text: 'Repair the old tap' },
+        { category: 'Plumber', text: 'Start the pressure pump' },
+        { category: 'Plumber', text: 'Install the geyser line' },
+        { category: 'Plumber', text: 'Change the water inlet and overflow lines once the new tank is working' },
+        { category: 'Plumber', text: 'Install a living room AC drain line' },
+        { category: 'Plumber', text: 'Install a new pipeline for the underground tank' },
+        { category: 'Plumber', text: 'Connect the Chowkdi rainwater line' },
+        { category: 'Plumber', text: 'Connect the terrace rainwater line' },
+
+        { category: 'Painting', text: 'Paint the panel' },
+        { category: 'Painting', text: 'Paint the ceiling in front of the temple' },
+        { category: 'Painting', text: 'Change the color below the Krishna wallpaper' },
+
+        { category: 'Mason & Carpenter', text: 'Fix Vibhu’s wardrobe' },
+        { category: 'Mason & Carpenter', text: 'Install side tables in the bedroom' },
+        { category: 'Mason & Carpenter', text: 'Get a center table' },
+        { category: 'Mason & Carpenter', text: 'Get a dining table' },
+        { category: 'Mason & Carpenter', text: 'Fix the entry gate door closer/opener' },
+        { category: 'Mason & Carpenter', text: 'Fix the grilled entry door closer/opener' },
+        { category: 'Mason & Carpenter', text: 'Stick laminate to the side of the kitchen platform near the oven stand' },
+        { category: 'Mason & Carpenter', text: 'Correct the TV showcase' },
+
+        { category: 'Electrician', text: 'Install a fan in the living room' },
+        { category: 'Electrician', text: 'Install wall lights in the bedroom' },
+        { category: 'Electrician', text: 'Install the ceiling light in front of the temple' },
+        { category: 'Electrician', text: 'Install the chandelier' },
+        { category: 'Electrician', text: 'Install the dining light' },
+        { category: 'Electrician', text: 'Install an exhaust fan in the old washroom' },
+        { category: 'Electrician', text: 'Change the 3-pin plug to a 16 A or 22 A plug' },
+        { category: 'Electrician', text: 'Install a profile light diffuser in the temple, bedroom (behind the bed), and TV background, or replace it with a flexible profile light' },
+        { category: 'Electrician', text: 'Install CCTV cameras' },
+
+        { category: 'Civil Work', text: 'Build the underground tank' },
+        { category: 'Civil Work', text: 'Install paver blocks in the parking area' },
+        { category: 'Civil Work', text: 'Reduce the floor level in the parking area' }
+      ].map((task, index) => ({ id: `initial-${index + 1}`, ...task, done: false }));
+
+      let tasks;
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        tasks = saved ? JSON.parse(saved) : initialTasks;
+        if (!Array.isArray(tasks)) tasks = initialTasks;
+      } catch {
+        tasks = initialTasks;
+      }
+
+      const pendingGroups = document.getElementById('pendingGroups');
+      const doneGroups = document.getElementById('doneGroups');
+      const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      })[char]);
+
+      function taskMarkup(task) {
+        const checked = task.done ? ' checked' : '';
+        return `<li class="task${task.done ? ' done' : ''}">
+          <input type="checkbox" id="task-${escapeHtml(task.id)}" data-task-id="${escapeHtml(task.id)}"${checked} aria-label="${task.done ? 'Mark pending' : 'Mark done'}: ${escapeHtml(task.text)}">
+          <label for="task-${escapeHtml(task.id)}">${escapeHtml(task.text)}</label>
+          <button class="delete" type="button" data-delete-id="${escapeHtml(task.id)}" aria-label="Delete: ${escapeHtml(task.text)}">Delete</button>
+        </li>`;
+      }
+
+      function renderGroups(container, groupEntries, emptyText) {
+        if (groupEntries.length === 0) {
+          container.innerHTML = `<p class="empty">${emptyText}</p>`;
+          return;
+        }
+        container.innerHTML = groupEntries.map(([category, items]) => `
+          <section class="category">
+            <h3 class="category-heading"><span>${escapeHtml(category)}</span><small>${items.length}</small></h3>
+            <ul>${items.map(taskMarkup).join('')}</ul>
+          </section>`).join('');
+      }
+
+      function render() {
+        const pending = tasks.filter((task) => !task.done);
+        const done = tasks.filter((task) => task.done);
+        const grouped = (items) => {
+          const map = new Map();
+          for (const task of items) {
+            if (!map.has(task.category)) map.set(task.category, []);
+            map.get(task.category).push(task);
+          }
+          return [...map.entries()];
+        };
+        renderGroups(pendingGroups, grouped(pending), 'No pending tasks.');
+        renderGroups(doneGroups, grouped(done), 'Completed tasks will appear here.');
+        document.getElementById('pendingCount').textContent = pending.length;
+        document.getElementById('doneCount').textContent = done.length;
+        document.getElementById('pendingSummary').textContent = `${pending.length} pending`;
+        document.getElementById('doneSummary').textContent = `${done.length} done`;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      }
+
+      document.addEventListener('change', (event) => {
+        const id = event.target.dataset.taskId;
+        if (id !== undefined) {
+          const task = tasks.find((item) => String(item.id) === id);
+          if (task) task.done = event.target.checked;
+          render();
+        }
+      });
+
+      document.addEventListener('click', (event) => {
+        const id = event.target.dataset.deleteId;
+        if (id !== undefined) {
+          tasks = tasks.filter((task) => String(task.id) !== id);
+          render();
+        }
+      });
+
+      render();
+    </script>
+  </body>
+</html>
